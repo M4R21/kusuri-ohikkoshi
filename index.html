@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="薬局間の不動在庫解消を支援する在庫移動先選定ツール">
+    <title>薬のお引越し — 在庫移動支援ツール</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- SheetJS for Excel parsing -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <!-- jsPDF for PDF generation (with fallback) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        if (!window.jspdf && !window.jsPDF) {
+            document.write('<script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"><\/script>');
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        if (typeof jspdf_autotable === 'undefined' && !(window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API && window.jspdf.jsPDF.API.autoTable)) {
+            document.write('<script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"><\/script>');
+        }
+    </script>
+</head>
+
+<body>
+    <!-- ========== ローディングスクリーン ========== -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-pill">🚚</div>
+            <h2>薬のお引越し</h2>
+            <div class="loading-bar">
+                <div class="loading-bar-inner"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== トースト通知 ========== -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- ========== メインアプリ ========== -->
+    <div id="app" class="app hidden">
+
+        <!-- ===== ロール選択画面 ===== -->
+        <section id="role-select" class="section role-select-section">
+            <div class="hero">
+                <div class="hero-bg"></div>
+                <div class="hero-content">
+                    <h1 class="app-title">
+                        <span class="title-icon">🚚</span>
+                        薬のお引越し
+                    </h1>
+                    <p class="app-subtitle">在庫移動支援ツール</p>
+                    <p class="app-desc">薬局間の不動在庫を解消し、最適な移動先を自動選定します</p>
+                </div>
+            </div>
+            <div class="role-cards">
+                <div class="role-card" data-role="admin" id="btn-role-admin">
+                    <div class="role-icon">⚙️</div>
+                    <h2>管理者</h2>
+                    <p>全店在庫・店舗名データの登録<br>除外薬品・店舗の設定</p>
+                    <div class="role-arrow">→</div>
+                </div>
+                <div class="role-card" data-role="store" id="btn-role-store">
+                    <div class="role-icon">💊</div>
+                    <h2>店舗</h2>
+                    <p>不動品のアップロード<br>移動先候補の選定・PDF出力</p>
+                    <div class="role-arrow">→</div>
+                </div>
+                <div class="role-card" data-role="hq" id="btn-role-hq">
+                    <div class="role-icon">🏢</div>
+                    <h2>本部</h2>
+                    <p>全店舗の不動在庫状況の閲覧<br>結果のPDF出力</p>
+                    <div class="role-arrow">→</div>
+                </div>
+                <div class="role-card" data-role="hikitori" id="btn-role-hikitori">
+                    <div class="role-icon">🔍</div>
+                    <h2>1200品目検索</h2>
+                    <p>備蓄品目の拡充用<br>他店舗の高頻度出庫薬を検索</p>
+                    <div class="role-arrow">→</div>
+                </div>
+            </div>
+            <div class="data-status" id="data-status"></div>
+        </section>
+
+        <!-- ===== 管理者画面 ===== -->
+        <section id="admin-section" class="section hidden">
+            <header class="section-header">
+                <button class="btn-back" id="admin-back">← 戻る</button>
+                <h1><span class="header-icon">⚙️</span> 管理者メニュー</h1>
+            </header>
+            <div class="admin-tabs">
+                <button class="tab active" data-tab="admin-data">📂 データ登録</button>
+                <button class="tab" data-tab="admin-exclude-drug">💊 除外薬品</button>
+                <button class="tab" data-tab="admin-exclude-store">🏪 除外店舗</button>
+                <button class="tab" data-tab="admin-reset">🔄 リセット</button>
+                <button class="tab" data-tab="admin-bulk-data">📦 バラ錠 一括登録</button>
+                <button class="tab" data-tab="admin-bulk-dashboard">📊 バラ錠 提出状況</button>
+                <button class="tab" data-tab="admin-bulk-exclude">🚫 バラ錠 除外設定</button>
+            </div>
+            <!-- データ登録タブ -->
+            <div class="tab-content active" id="admin-data">
+                <div class="card">
+                    <h3>📊 在庫データ登録</h3>
+                    <p class="card-desc">在庫データファイル（.xls）を順番にアップロードしてください。1ファイルにつき最大20店舗分のデータが含まれます。</p>
+                    <div class="upload-steps">
+                        <div class="upload-step" id="inv-step-1">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h4>在庫データ 1（店舗1〜20）</h4>
+                                <div class="drop-zone" id="drop-inv-1">
+                                    <div class="drop-zone-icon">📁</div>
+                                    <p>ファイルをドラッグ＆ドロップ<br>またはクリックして選択</p>
+                                    <input type="file" accept=".xls,.xlsx" id="file-inv-1" hidden>
+                                </div>
+                                <div class="file-status" id="status-inv-1"></div>
+                            </div>
+                        </div>
+                        <div class="upload-step" id="inv-step-2">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h4>在庫データ 2（店舗21〜）</h4>
+                                <div class="drop-zone" id="drop-inv-2">
+                                    <div class="drop-zone-icon">📁</div>
+                                    <p>ファイルをドラッグ＆ドロップ<br>またはクリックして選択</p>
+                                    <input type="file" accept=".xls,.xlsx" id="file-inv-2" hidden>
+                                </div>
+                                <div class="file-status" id="status-inv-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="progress-area hidden" id="inv-progress">
+                        <div class="progress-bar">
+                            <div class="progress-bar-inner" id="inv-progress-bar"></div>
+                        </div>
+                        <p class="progress-text" id="inv-progress-text">処理中...</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>🏪 店舗名紐付けデータ</h3>
+                    <p class="card-desc">店舗名用データファイル（.xls）をアップロードしてください。在庫データの店舗番号と店舗名を紐付けます。</p>
+                    <div class="drop-zone" id="drop-store-names">
+                        <div class="drop-zone-icon">📁</div>
+                        <p>ファイルをドラッグ＆ドロップ<br>またはクリックして選択</p>
+                        <input type="file" accept=".xls,.xlsx" id="file-store-names" hidden>
+                    </div>
+                    <div class="file-status" id="status-store-names"></div>
+                </div>
+                <div class="card" id="data-summary-card" style="display:none">
+                    <h3>📋 登録データサマリー</h3>
+                    <div class="summary-grid" id="data-summary"></div>
+                </div>
+            </div>
+            <!-- 除外薬品タブ -->
+            <div class="tab-content" id="admin-exclude-drug">
+                <div class="card">
+                    <h3>🚫 除外薬品設定</h3>
+                    <p class="card-desc">移動不可とする薬品を登録します。麻薬を含む薬品は自動的に除外されます。</p>
+                    <div class="exclude-form" style="display:flex; gap:12px; align-items:center;">
+                        <div class="autocomplete-wrapper" style="flex:1;">
+                            <input type="text" id="exclude-drug-input" placeholder="薬品名を入力（3文字以上で候補表示）..."
+                                class="input-field" autocomplete="off">
+                            <div class="autocomplete-list hidden" id="exclude-drug-autocomplete"></div>
+                        </div>
+                        <div class="checkbox-wrapper"
+                            style="display:flex; align-items:center; gap:4px; font-size:0.9rem;">
+                            <input type="checkbox" id="exclude-include-others">
+                            <label for="exclude-include-others"
+                                style="cursor:pointer; white-space:nowrap; color:var(--text-secondary);">他メーカー等も含む</label>
+                        </div>
+                        <button class="btn btn-primary" id="btn-add-exclude-drug"
+                            style="white-space:nowrap;">追加</button>
+                    </div>
+                    <div class="search-box">
+                        <input type="text" id="search-exclude-drug" placeholder="🔍 除外薬品を検索..." class="input-field">
+                    </div>
+                    <div class="exclude-list" id="exclude-drug-list"></div>
+                </div>
+            </div>
+            <!-- 除外店舗タブ -->
+            <div class="tab-content" id="admin-exclude-store">
+                <div class="card">
+                    <h3>🏪 除外店舗設定</h3>
+                    <p class="card-desc">閉店や売却予定の店舗を計算対象から外します。</p>
+                    <div class="store-exclude-list" id="store-exclude-list">
+                        <p class="empty-message">店舗データが登録されていません</p>
+                    </div>
+                </div>
+            </div>
+            <!-- リセットタブ -->
+            <div class="tab-content" id="admin-reset">
+                <div class="card card-danger">
+                    <h3>⚠️ データリセット</h3>
+                    <p class="card-desc">毎月の更新時に、全てのデータをクリアして新しいデータで上書きする場合に使用します。</p>
+                    <div class="reset-options">
+                        <button class="btn btn-danger" id="btn-reset-inventory">在庫データのみリセット</button>
+                        <button class="btn btn-danger" id="btn-reset-all">全データリセット</button>
+                    </div>
+                    <p class="card-warn">※この操作は取り消せません。実行前に必ずバックアップを取ってください。</p>
+                </div>
+            </div>
+            <!-- バラ錠登録タブ -->
+            <div class="tab-content" id="admin-bulk-data">
+                <div class="card">
+                    <h3>📂 店舗一包化データ 一括アップロード</h3>
+                    <p class="card-desc">店舗のファイルを含むフォルダを選択してください。フォルダ内のエクセルファイルをすべて読み込みます。</p>
+                    <div class="drop-zone" id="drop-bulk">
+                        <div class="drop-zone-icon">📁</div>
+                        <p>クリックしてフォルダを選択してください</p>
+                        <!-- webkitdirectory を指定してフォルダの選択を可能にする -->
+                        <input type="file" accept=".xls,.xlsx,.xlsm" id="file-bulk" webkitdirectory directory multiple
+                            hidden>
+                    </div>
+                    <div class="file-status" id="status-bulk"></div>
+                    <div class="progress-area hidden" id="bulk-progress">
+                        <div class="progress-bar">
+                            <div class="progress-bar-inner" id="bulk-progress-bar"></div>
+                        </div>
+                        <p class="progress-text" id="bulk-progress-text">処理中...</p>
+                    </div>
+                </div>
+            </div>
+            <!-- バラ錠提出状況タブ -->
+            <div class="tab-content" id="admin-bulk-dashboard">
+                <div class="card">
+                    <div class="card-header-row">
+                        <h3>📊 各店舗のデータ提出状況</h3>
+                        <div class="card-actions">
+                            <span class="status-legend"><span class="legend-box" style="background:#fff;"></span>
+                                提出済</span>
+                            <span class="status-legend"><span class="legend-box"
+                                    style="background:var(--danger-light, #ffebee);"></span> 未提出</span>
+                        </div>
+                    </div>
+                    <p class="card-desc">店舗マスターに登録されている全店舗の「一包化データ」提出状況を表示します。</p>
+                    <div class="table-container">
+                        <table class="data-table" id="bulk-status-table">
+                            <thead>
+                                <tr>
+                                    <th>店舗名</th>
+                                    <th>ステータス</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bulk-status-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <!-- バラ錠除外設定タブ -->
+            <div class="tab-content" id="admin-bulk-exclude">
+                <div class="card">
+                    <h3>🚫 バラ錠 除外設定</h3>
+                    <p class="card-desc">特定の店舗・薬品の組み合わせを検索対象から除外します。</p>
+                    <div class="exclude-form" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                        <select id="bulk-exclude-store" class="select-field" style="width: auto;">
+                            <option value="">店舗を選択</option>
+                        </select>
+                        <input type="text" id="bulk-exclude-drug" placeholder="薬品名を入力..." class="input-field"
+                            style="flex:1;">
+                        <button class="btn btn-primary" id="btn-add-bulk-exclude"
+                            style="white-space:nowrap;">追加</button>
+                    </div>
+                    <div class="search-box" style="margin-top: 15px;">
+                        <input type="text" id="search-bulk-exclude" placeholder="🔍 除外リストを検索..." class="input-field">
+                    </div>
+                    <div class="exclude-list" id="bulk-exclude-list"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== 店舗画面 ===== -->
+        <section id="store-section" class="section hidden">
+            <header class="section-header">
+                <button class="btn-back" id="store-back">← 戻る</button>
+                <h1><span class="header-icon">💊</span> 店舗メニュー</h1>
+                <span class="store-name-badge hidden" id="store-name-badge"></span>
+            </header>
+            <div class="card" id="store-select-card">
+                <h3>🏪 店舗選択</h3>
+                <p class="card-desc">作業する店舗を選択してください。選択後は他の店舗のデータにはアクセスできません。</p>
+                <div class="store-select-row">
+                    <select id="store-select" class="select-field">
+                        <option value="">店舗を選択してください</option>
+                    </select>
+                </div>
+            </div>
+            <div id="store-main" class="hidden">
+                <div class="store-top-row">
+                    <div class="card store-top-card">
+                        <h3>📂 不動品データ</h3>
+                        <div class="drop-zone drop-zone-compact" id="drop-fudou">
+                            <div class="drop-zone-icon">📁</div>
+                            <p>ドラッグ＆ドロップ<br>またはクリック</p>
+                            <input type="file" accept=".xls,.xlsx" id="file-fudou" hidden>
+                        </div>
+                        <div class="file-status" id="status-fudou"></div>
+                    </div>
+                    <div class="card store-top-card" id="store-action-bar">
+                        <h3>🔧 操作メニュー</h3>
+                        <div class="store-action-buttons">
+                            <button class="btn btn-primary" id="btn-manual-add"
+                                style="box-shadow: 0 0 10px var(--accent-glow); width:100%;">➕ 手動で薬を追加</button>
+                            <button class="btn btn-primary" id="btn-bulk-search-modal"
+                                style="background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); width:100%;">📦
+                                バラ検索</button>
+                            <button class="btn btn-primary" id="btn-export-pdf"
+                                style="background: linear-gradient(135deg, #ef4444, #dc2626); box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); width:100%;">📄
+                                PDF出力</button>
+                            <button class="btn btn-secondary" id="btn-export-csv"
+                                style="background: linear-gradient(135deg, #64748b, #475569); color: #fff; border: none; box-shadow: 0 0 10px rgba(100, 116, 139, 0.4); width:100%;">📊
+                                CSV出力</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="store-results" class="hidden">
+                    <div class="card">
+                        <div class="card-header-row">
+                            <h3>📋 移動先候補一覧</h3>
+                            <div class="card-actions">
+                                <button class="btn btn-secondary" id="btn-sort-by-dest">🔀 引き取り先でソート</button>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table" id="store-table">
+                                <thead>
+                                    <tr>
+                                        <th>薬品名</th>
+                                        <th style="width: 8%;">在庫数</th>
+                                        <th style="width: 12%;">有効期限</th>
+                                        <th style="width: 12%;">ロット</th>
+                                        <th>備考</th>
+                                        <th style="width: 25%;">引き取り先</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="store-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card card-danger">
+                        <div class="card-header-row">
+                            <h3>🗑️ データリセット</h3>
+                            <button class="btn btn-danger" id="btn-store-reset">この店舗のデータをリセット</button>
+                        </div>
+                        <p class="card-desc" style="margin-bottom:0">この店舗の不動品データのみを削除します。他店舗のデータには影響しません。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="hq-section" class="section hidden">
+            <header class="section-header">
+                <button class="btn-back" id="hq-back">← 戻る</button>
+                <h1><span class="header-icon">🏢</span> 本部メニュー</h1>
+            </header>
+            <div class="card">
+                <div class="card-header-row">
+                    <h3>📊 フィルタ</h3>
+                </div>
+                <div class="filter-row">
+                    <select id="hq-store-filter" class="select-field">
+                        <option value="">全店舗</option>
+                    </select>
+                    <select id="hq-fudou-filter" class="select-field">
+                        <option value="">全不動区分</option>
+                        <option value="R">180日不動 (R)</option>
+                        <option value="O">120日不動 (O)</option>
+                        <option value="B">90日不動 (B)</option>
+                    </select>
+                </div>
+                <div class="filter-row" style="margin-top: 12px;">
+                    <select id="hq-amount-mode" class="select-field">
+                        <option value="">金額条件なし</option>
+                        <option value="gte">金額 ≧（以上）</option>
+                        <option value="lte">金額 ≦（以下）</option>
+                        <option value="eq">金額 ＝（一致）</option>
+                    </select>
+                    <input type="number" id="hq-amount-value" class="input-field" placeholder="金額を入力（例: 10000）" min="0"
+                        style="max-width: 240px;">
+                    <div class="card-actions">
+                        <button class="btn btn-primary" id="btn-hq-pdf"
+                            style="background: linear-gradient(135deg, #ef4444, #dc2626); box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);">📄
+                            PDF出力</button>
+                        <button class="btn btn-secondary" id="btn-hq-csv"
+                            style="background: linear-gradient(135deg, #64748b, #475569); color: #fff; border: none; box-shadow: 0 0 10px rgba(100, 116, 139, 0.4);">📊
+                            CSV出力</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header-row">
+                    <h3>📋 全店不動在庫一覧 <span class="hq-count" id="hq-count"></span></h3>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="hq-table">
+                        <thead>
+                            <tr>
+                                <th data-sort="storeName" class="sortable">店舗名 ⇅</th>
+                                <th data-sort="drugName" class="sortable">薬品名 ⇅</th>
+                                <th data-sort="stockQty" class="sortable">在庫数 ⇅</th>
+                                <th data-sort="stockAmount" class="sortable">在庫金額 ⇅</th>
+                                <th data-sort="fudouClass" class="sortable">不動期間 ⇅</th>
+                                <th data-sort="shipFreq" class="sortable">出庫頻度 ⇅</th>
+                                <th>移動先候補</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hq-table-body"></tbody>
+                    </table>
+                </div>
+                <div class="empty-message hidden" id="hq-empty">データがありません。管理者が在庫データを登録するまでお待ちください。</div>
+            </div>
+        </section>
+
+        <!-- ===== 1200品目検索画面 ===== -->
+        <section id="hikitori-section" class="section hidden">
+            <header class="section-header">
+                <button class="btn-back" id="hikitori-back">← 戻る</button>
+                <h1><span class="header-icon">🔍</span> 1200品目検索</h1>
+            </header>
+            <div class="card" style="margin: 24px 32px 0;">
+                <h3>🏪 店舗選択</h3>
+                <p class="card-desc">備蓄品目を拡充したい店舗を選択してください。</p>
+                <select id="hikitori-store-select" class="select-field" style="max-width: 400px;">
+                    <option value="">店舗を選択してください</option>
+                </select>
+            </div>
+            <div id="hikitori-search-area" class="hidden" style="padding: 0 32px;">
+                <div class="card">
+                    <h3>💰 検索条件</h3>
+                    <p class="card-desc">他店舗で出庫頻度◎・〇かつ自店舗で取り扱いのない薬を検索します。</p>
+                    
+                    <div class="hikitori-filter-section">
+                        <div class="hikitori-filter-group">
+                            <label class="hikitori-filter-label">薬価上限</label>
+                            <div class="hikitori-price-input-wrap">
+                                <input type="number" id="hikitori-price-max" class="input-field" placeholder="例: 100" min="0" step="0.1">
+                                <span class="hikitori-price-unit">円以下</span>
+                            </div>
+                        </div>
+
+                        <div class="hikitori-filter-group" style="flex: 1; min-width: 300px;">
+                            <label class="hikitori-filter-label" style="display:flex; justify-content:space-between; align-items:center;">
+                                <span>対象とする単位（チェックした単位の薬品を検索します）</span>
+                                <div>
+                                    <button class="btn btn-secondary" id="btn-hikitori-unit-all" style="padding: 4px 8px; font-size: 0.8rem;">すべて選択</button>
+                                    <button class="btn btn-secondary" id="btn-hikitori-unit-clear" style="padding: 4px 8px; font-size: 0.8rem;">すべて解除</button>
+                                </div>
+                            </label>
+                            <div class="hikitori-store-checkbox-list" id="hikitori-target-units" style="max-height: 120px;">
+                                <!-- JSで動的に単位一覧を生成 -->
+                            </div>
+                            <div style="margin-top: 8px;">
+                                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.9rem; color:var(--text-primary);">
+                                    <input type="checkbox" id="hikitori-include-kampo" checked>
+                                    ☑ 漢方薬（薬品名にツムラ・クラシエを含む）は単位設定を無視して対象に含める
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="hikitori-filter-group" style="margin-top: 20px;">
+                        <label class="hikitori-filter-label" style="display:flex; justify-content:space-between; align-items:center;">
+                            <span>引き取り元店舗（チェックした店舗からのみ引き取ります）</span>
+                            <div>
+                                <button class="btn btn-secondary" id="btn-hikitori-store-all" style="padding: 4px 8px; font-size: 0.8rem;">すべて選択</button>
+                                <button class="btn btn-secondary" id="btn-hikitori-store-clear" style="padding: 4px 8px; font-size: 0.8rem;">すべて解除</button>
+                            </div>
+                        </label>
+                        <div class="hikitori-store-checkbox-list" id="hikitori-target-stores">
+                            <!-- JSで動的に店舗一覧を生成 -->
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 24px; text-align: center;">
+                        <button class="btn btn-primary hikitori-search-btn" id="btn-hikitori-search" style="width: 200px;">
+                            🔍 検索
+                        </button>
+                    </div>
+                </div>
+                <div class="card" id="hikitori-results-card" style="display:block;">
+                    <div class="card-header-row">
+                        <h3>📋 検索結果 <span class="hq-count" id="hikitori-count"></span></h3>
+                        <div class="card-actions">
+                            <button class="btn btn-secondary" id="btn-hikitori-csv"
+                                style="background: linear-gradient(135deg, #64748b, #475569); color: #fff; border: none; box-shadow: 0 0 10px rgba(100, 116, 139, 0.4);">
+                                📊 CSV出力
+                            </button>
+                        </div>
+                    </div>
+                    <p class="card-desc">自店舗で在庫0の薬品のうち、他店舗で出庫頻度◎・〇のものを表示しています。</p>
+                    <div class="table-container">
+                        <table class="data-table" id="hikitori-table">
+                            <thead>
+                                <tr>
+                                    <th data-sort="drugName" class="sortable">薬品名 ⇅</th>
+                                    <th data-sort="unitPrice" class="sortable">薬価 ⇅</th>
+                                    <th data-sort="bestFreq" class="sortable">最高出庫頻度 ⇅</th>
+                                    <th data-sort="storeCount" class="sortable">該当店舗数 ⇅</th>
+                                    <th>該当店舗</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hikitori-table-body"></tbody>
+                        </table>
+                    </div>
+                    <div class="empty-message hidden" id="hikitori-empty">条件に一致する薬品はありません。</div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- ========== 確認ダイアログ ========== -->
+    <div id="confirm-modal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <h3 id="confirm-title">確認</h3>
+            <p id="confirm-message"></p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="confirm-cancel">キャンセル</button>
+                <button class="btn btn-danger" id="confirm-ok">実行</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 手動追加ダイアログ ========== -->
+    <div id="manual-add-modal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <h3>➕ 薬を手動で追加</h3>
+            <p style="margin-bottom:12px; font-size:0.9rem; color:var(--text-secondary);">不動品を手動で追加します。薬品名を入力して追加してください。
+            </p>
+            <div style="display:flex; flex-direction:column; gap:12px;">
+                <div class="autocomplete-wrapper" style="width: 100%;">
+                    <input type="text" id="manual-drug-name" class="input-field" placeholder="薬品名（3文字以上で候補表示） ※必須"
+                        autocomplete="off">
+                    <div class="autocomplete-list hidden" id="manual-drug-autocomplete"></div>
+                </div>
+                <input type="number" id="manual-qty" class="input-field" placeholder="在庫数・錠数（例：100）" min="1">
+                <input type="text" id="manual-expiry" class="input-field" placeholder="有効期限（例：2025/10/31）">
+                <input type="text" id="manual-lot" class="input-field" placeholder="ロット番号">
+                <input type="text" id="manual-memo" class="input-field" placeholder="備考">
+            </div>
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button class="btn btn-secondary" id="manual-cancel">キャンセル</button>
+                <button class="btn btn-primary" id="manual-save">追加して候補を探す</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== バラ検索モーダル ========== -->
+    <div id="bulk-search-modal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content" style="max-width: 800px; width: 90%;">
+            <h3>📦 バラ錠を検索・追加</h3>
+            <p style="margin-bottom:12px; font-size:0.9rem; color:var(--text-secondary);">
+                他店舗の一包化データ（使用量）から引き取り先を探し、リストに追加します。</p>
+            <div style="display:flex; gap:8px; margin-bottom: 20px;">
+                <div class="autocomplete-wrapper" style="width: 100%; display: flex; flex: 1;">
+                    <input type="text" id="bulk-search-input" class="input-field" placeholder="薬品名（3文字以上で候補表示）"
+                        autocomplete="off" style="flex: 1;">
+                    <div class="autocomplete-list hidden" id="bulk-drug-autocomplete"></div>
+                </div>
+                <button class="btn btn-primary" id="btn-bulk-search">検索</button>
+            </div>
+            <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                <table class="data-table" id="bulk-table">
+                    <thead>
+                        <tr>
+                            <th>薬品名</th>
+                            <th>店舗名</th>
+                            <th>使用状況（回数・最終処方日）</th>
+                            <th>アクション</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bulk-table-body">
+                    </tbody>
+                </table>
+                <div class="empty-message hidden" id="bulk-empty" style="padding: 20px 0; text-align: center;">候補なし
+                </div>
+            </div>
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button class="btn btn-secondary" id="bulk-search-close">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/db.js"></script>
+    <script src="js/matching.js"></script>
+    <script src="js/pdf.js"></script>
+    <script src="js/admin.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/hq.js"></script>
+    <script src="js/bulk.js"></script>
+    <script src="js/hikitori.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
