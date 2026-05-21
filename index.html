@@ -40,6 +40,20 @@
         </div>
     </div>
 
+    <!-- ========== パスワード認証画面 ========== -->
+    <div id="password-screen" class="password-screen">
+        <div class="password-content">
+            <div class="password-icon">🔒</div>
+            <h2>薬のお引越し</h2>
+            <p>ツールを利用するにはパスワードを入力してください</p>
+            <div class="password-form">
+                <input type="password" id="password-input" class="password-input" placeholder="パスワードを入力" autocomplete="off">
+                <button class="btn btn-primary password-btn" id="password-submit">ログイン</button>
+            </div>
+            <p class="password-error hidden" id="password-error">パスワードが正しくありません</p>
+        </div>
+    </div>
+
     <!-- ========== トースト通知 ========== -->
     <div id="toast-container" class="toast-container"></div>
 
@@ -102,6 +116,7 @@
                 <button class="tab" data-tab="admin-bulk-data">📦 バラ錠 一括登録</button>
                 <button class="tab" data-tab="admin-bulk-dashboard">📊 バラ錠 提出状況</button>
                 <button class="tab" data-tab="admin-bulk-exclude">🚫 バラ錠 除外設定</button>
+                <button class="tab" data-tab="admin-share">📤 データ共有</button>
             </div>
             <!-- データ登録タブ -->
             <div class="tab-content active" id="admin-data">
@@ -270,6 +285,38 @@
                         <input type="text" id="search-bulk-exclude" placeholder="🔍 除外リストを検索..." class="input-field">
                     </div>
                     <div class="exclude-list" id="bulk-exclude-list"></div>
+                </div>
+            </div>
+            <!-- データ共有タブ -->
+            <div class="tab-content" id="admin-share">
+                <div class="card">
+                    <h3>🌐 GitHubリポジトリ設定</h3>
+                    <p class="card-desc">データを共有するGitHubリポジトリのURLを設定してください。<br>
+                        例: <code>https://github.com/ユーザー名/リポジトリ名</code></p>
+                    <div style="display:flex; gap:12px; align-items:center;">
+                        <input type="text" id="github-repo-url" class="input-field" placeholder="https://github.com/ユーザー名/リポジトリ名" style="flex:1;">
+                        <button class="btn btn-primary" id="btn-save-github-url" style="white-space:nowrap;">保存</button>
+                    </div>
+                    <div class="file-status" id="status-github-url"></div>
+                </div>
+                <div class="card">
+                    <h3>📤 共有データをエクスポート</h3>
+                    <p class="card-desc">現在登録されている全データ（在庫・店舗名・除外設定・一包化データ）を1つのJSONファイルにまとめてダウンロードします。<br>
+                        ダウンロードしたファイルをGitHubリポジトリの <code>data/</code> フォルダにアップロードしてください。</p>
+                    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                        <button class="btn btn-primary" id="btn-export-shared" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);">
+                            📤 共有データをエクスポート（JSONダウンロード）
+                        </button>
+                    </div>
+                    <div class="file-status" id="status-export-shared"></div>
+                </div>
+                <div class="card">
+                    <h3>📥 共有データの状態</h3>
+                    <p class="card-desc">GitHub上に公開されている共有データの状態を確認します。</p>
+                    <div style="display:flex; gap:12px; align-items:center;">
+                        <button class="btn btn-secondary" id="btn-check-shared-status">🔍 GitHubのデータ状態を確認</button>
+                    </div>
+                    <div class="file-status" id="status-shared-check"></div>
                 </div>
             </div>
         </section>
@@ -597,6 +644,7 @@
     <script src="js/hq.js"></script>
     <script src="js/bulk.js"></script>
     <script src="js/hikitori.js"></script>
+    <script src="js/shared-data.js"></script>
     <script src="js/app.js"></script>
 </body>
 

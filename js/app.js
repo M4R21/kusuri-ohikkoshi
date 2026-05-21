@@ -1,14 +1,71 @@
 /* ============================================
-   app.js — メインアプリケーション
+   app.js — メインアプリケーション（GitHub Pages対応版）
    ============================================ */
 
 const App = (() => {
 
-    // ===== 初期化 =====
-    async function init() {
+    // ===== パスワード認証 =====
+    const APP_PASSWORD = '111';
+
+    function checkAuth() {
+        return sessionStorage.getItem('ohikkoshi_auth') === 'ok';
+    }
+
+    function showPasswordScreen() {
+        const pwScreen = document.getElementById('password-screen');
+        const loadingScreen = document.getElementById('loading-screen');
+
+        // ローディング画面を即座に非表示
+        loadingScreen.style.display = 'none';
+        // パスワード画面を表示
+        pwScreen.classList.remove('hidden');
+
+        const input = document.getElementById('password-input');
+        const submitBtn = document.getElementById('password-submit');
+        const errorEl = document.getElementById('password-error');
+
+        const doLogin = () => {
+            if (input.value === APP_PASSWORD) {
+                sessionStorage.setItem('ohikkoshi_auth', 'ok');
+                pwScreen.classList.add('fade-out');
+                setTimeout(() => {
+                    pwScreen.style.display = 'none';
+                    startApp();
+                }, 500);
+            } else {
+                errorEl.classList.remove('hidden');
+                input.value = '';
+                input.focus();
+                // 振動アニメーション
+                const form = document.querySelector('.password-form');
+                form.classList.add('shake');
+                setTimeout(() => form.classList.remove('shake'), 500);
+            }
+        };
+
+        submitBtn.addEventListener('click', doLogin);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') doLogin();
+        });
+
+        // 自動フォーカス
+        setTimeout(() => input.focus(), 100);
+    }
+
+    // ===== アプリ起動 =====
+    async function startApp() {
+        const loadingScreen = document.getElementById('loading-screen');
+        loadingScreen.style.display = 'flex';
+        loadingScreen.classList.remove('fade-out');
+
         try {
             // DB初期化
             await DB.open();
+
+            // GitHubから最新の共有データを自動取得（バックグラウンド）
+            if (typeof SharedData !== 'undefined') {
+                await SharedData.importFromGitHub(true);
+            }
 
             // jsPDFライブラリの読み込み確認
             if (!window.jspdf && !window.jsPDF) {
@@ -26,6 +83,7 @@ const App = (() => {
             await HQ.init();
             if (typeof Bulk !== 'undefined') await Bulk.init();
             if (typeof Hikitori !== 'undefined') await Hikitori.init();
+            if (typeof SharedData !== 'undefined') await SharedData.init();
 
             // ロール選択イベント
             document.querySelectorAll('.role-card').forEach(card => {
@@ -45,17 +103,29 @@ const App = (() => {
 
             // ローディング画面を非表示
             setTimeout(() => {
-                const loadingScreen = document.getElementById('loading-screen');
                 loadingScreen.classList.add('fade-out');
                 setTimeout(() => {
                     loadingScreen.style.display = 'none';
                     document.getElementById('app').classList.remove('hidden');
                 }, 500);
-            }, 1200);
+            }, 800);
 
         } catch (err) {
             console.error('初期化エラー:', err);
             showToast('初期化に失敗しました: ' + err.message, 'error');
+        }
+    }
+
+    // ===== 初期化（エントリーポイント） =====
+    async function init() {
+        if (checkAuth()) {
+            // すでに認証済み → アプリを直接起動
+            const pwScreen = document.getElementById('password-screen');
+            if (pwScreen) pwScreen.style.display = 'none';
+            await startApp();
+        } else {
+            // 未認証 → パスワード画面を表示
+            showPasswordScreen();
         }
     }
 

@@ -1444,3 +1444,111 @@ body {
         width: 100%;
     }
 }
+
+/* ===== Password Screen ===== */
+.password-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9998;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.password-screen.hidden {
+    display: none !important;
+}
+
+.password-screen.fade-out {
+    opacity: 0;
+    transform: scale(1.05);
+    pointer-events: none;
+}
+
+.password-content {
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    padding: 40px;
+    background: var(--bg-card);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg), 0 0 60px rgba(16, 185, 129, 0.08);
+}
+
+.password-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+    animation: bounce 2s ease-in-out infinite;
+}
+
+.password-content h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #f1f5f9, var(--accent-light));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+}
+
+.password-content > p {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 28px;
+}
+
+.password-form {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.password-input {
+    flex: 1;
+    padding: 12px 18px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-family: inherit;
+    outline: none;
+    transition: all var(--transition);
+    text-align: center;
+    letter-spacing: 0.3em;
+}
+
+.password-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.password-btn {
+    padding: 12px 28px !important;
+    font-size: 1rem !important;
+    box-shadow: 0 0 16px var(--accent-glow);
+}
+
+.password-error {
+    color: var(--danger) !important;
+    font-size: 0.85rem !important;
+    margin-top: 16px !important;
+    margin-bottom: 0 !important;
+    -webkit-text-fill-color: var(--danger);
+}
+
+.password-form.shake {
+    animation: shakeAnim 0.4s ease;
+}
+
+@keyframes shakeAnim {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-12px); }
+    40% { transform: translateX(10px); }
+    60% { transform: translateX(-8px); }
+    80% { transform: translateX(6px); }
+}
