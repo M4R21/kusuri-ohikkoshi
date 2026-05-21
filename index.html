@@ -74,6 +74,12 @@
                 </div>
             </div>
             <div class="role-cards">
+                <div class="role-card" data-role="search" id="btn-role-search">
+                    <div class="role-icon">🔎</div>
+                    <h2>薬品検索</h2>
+                    <p>薬品名で在庫を横断検索<br>往診同行時に最適</p>
+                    <div class="role-arrow">→</div>
+                </div>
                 <div class="role-card" data-role="store" id="btn-role-store">
                     <div class="role-icon">💊</div>
                     <h2>店舗</h2>
@@ -175,7 +181,7 @@
             <div class="tab-content" id="admin-exclude-drug">
                 <div class="card">
                     <h3>🚫 除外薬品設定</h3>
-                    <p class="card-desc">移動不可とする薬品を登録します。麻薬を含む薬品は自動的に除外されます。</p>
+                    <p class="card-desc">移動不可とする薬品を登録します。麻薬を含む薬品は自動的に除外されます。<br><span style="color: var(--accent-light); font-weight: bold;">💡 設定変更後に「データ共有」タブからデータをエクスポートし、GitHubへアップロードすることで、すべてのPCに設定が反映されます。</span></p>
                     <div class="exclude-form" style="display:flex; gap:12px; align-items:center;">
                         <div class="autocomplete-wrapper" style="flex:1;">
                             <input type="text" id="exclude-drug-input" placeholder="薬品名を入力（3文字以上で候補表示）..."
@@ -201,7 +207,7 @@
             <div class="tab-content" id="admin-exclude-store">
                 <div class="card">
                     <h3>🏪 除外店舗設定</h3>
-                    <p class="card-desc">閉店や売却予定の店舗を計算対象から外します。</p>
+                    <p class="card-desc">閉店や売却予定の店舗を計算対象から外します。<br><span style="color: var(--accent-light); font-weight: bold;">💡 設定変更後に「データ共有」タブからデータをエクスポートし、GitHubへアップロードすることで、すべてのPCに設定が反映されます。</span></p>
                     <div class="store-exclude-list" id="store-exclude-list">
                         <p class="empty-message">店舗データが登録されていません</p>
                     </div>
@@ -464,6 +470,49 @@
         </section>
 
         <!-- ===== 1200品目検索画面 ===== -->
+        <!-- ===== 薬品検索画面 ===== -->
+        <section id="search-section" class="section hidden">
+            <header class="section-header">
+                <button class="btn-back" id="search-back">← 戻る</button>
+                <h1><span class="header-icon">🔎</span> 薬品検索</h1>
+            </header>
+            <div style="padding: 0 32px; max-width: 800px; margin: 0 auto;">
+                <!-- 検索入力 -->
+                <div class="card">
+                    <div class="search-input-area">
+                        <div class="autocomplete-wrapper" style="flex:1;">
+                            <input type="text" id="drug-search-input" class="input-field search-main-input"
+                                   placeholder="薬品名を入力（例: アムロジピン）" autocomplete="off">
+                            <div class="autocomplete-list hidden" id="drug-search-autocomplete"></div>
+                        </div>
+                        <button class="btn btn-primary" id="btn-drug-search">検索</button>
+                        <button class="btn btn-secondary search-filter-btn" id="btn-search-filter-toggle" title="店舗絞り込み">
+                            🏪
+                            <span class="search-filter-badge hidden" id="search-filter-badge">0</span>
+                        </button>
+                    </div>
+                </div>
+                <!-- 店舗フィルタパネル -->
+                <div class="card search-filter-panel hidden" id="search-filter-panel">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <h3 style="font-size:1rem;">🏪 表示店舗の絞り込み</h3>
+                        <div style="display:flex; gap:6px;">
+                            <button class="btn btn-secondary" id="btn-search-store-all" style="padding:4px 10px; font-size:0.8rem;">全選択</button>
+                            <button class="btn btn-secondary" id="btn-search-store-clear" style="padding:4px 10px; font-size:0.8rem;">全解除</button>
+                        </div>
+                    </div>
+                    <div class="search-store-checkbox-list" id="search-store-list"></div>
+                </div>
+                <!-- 検索結果 -->
+                <div id="search-results-area" class="hidden">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin:16px 0 8px;">
+                        <h3 style="font-size:1rem; color:var(--text-secondary);">📋 検索結果 <span class="hq-count" id="search-result-count"></span></h3>
+                    </div>
+                    <div id="search-results-list"></div>
+                </div>
+            </div>
+        </section>
+
         <section id="hikitori-section" class="section hidden">
             <header class="section-header">
                 <button class="btn-back" id="hikitori-back">← 戻る</button>
@@ -644,6 +693,7 @@
     <script src="js/hq.js"></script>
     <script src="js/bulk.js"></script>
     <script src="js/hikitori.js"></script>
+    <script src="js/search.js"></script>
     <script src="js/shared-data.js"></script>
     <script src="js/app.js"></script>
 </body>

@@ -83,6 +83,7 @@ const App = (() => {
             await HQ.init();
             if (typeof Bulk !== 'undefined') await Bulk.init();
             if (typeof Hikitori !== 'undefined') await Hikitori.init();
+            if (typeof DrugSearch !== 'undefined') await DrugSearch.init();
             if (typeof SharedData !== 'undefined') await SharedData.init();
 
             // ロール選択イベント
@@ -97,6 +98,7 @@ const App = (() => {
             document.getElementById('admin-back').addEventListener('click', () => navigateTo('home'));
             document.getElementById('store-back').addEventListener('click', () => Store.goBack());
             document.getElementById('hq-back').addEventListener('click', () => navigateTo('home'));
+            document.getElementById('search-back').addEventListener('click', () => navigateTo('home'));
 
             // データステータス更新
             await updateDataStatusFromDB();
@@ -150,6 +152,10 @@ const App = (() => {
             case 'hikitori':
                 document.getElementById('hikitori-section').classList.remove('hidden');
                 if (typeof Hikitori !== 'undefined') Hikitori.onShow();
+                break;
+            case 'search':
+                document.getElementById('search-section').classList.remove('hidden');
+                if (typeof DrugSearch !== 'undefined') DrugSearch.onShow();
                 break;
             default:
                 document.getElementById('role-select').classList.remove('hidden');

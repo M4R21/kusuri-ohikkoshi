@@ -1552,3 +1552,384 @@ body {
     60% { transform: translateX(-8px); }
     80% { transform: translateX(6px); }
 }
+
+/* ============================================
+   薬品検索 — Drug Search Module
+   ============================================ */
+
+/* --- 検索入力エリア --- */
+.search-input-area {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.search-main-input {
+    font-size: 1.05rem !important;
+    padding: 12px 16px !important;
+}
+
+.search-filter-btn {
+    position: relative;
+    padding: 8px 14px !important;
+    font-size: 1.2rem;
+    min-width: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-filter-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+/* --- 店舗フィルタパネル --- */
+.search-filter-panel {
+    border: 1px solid var(--border-hover);
+    animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.search-store-checkbox-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    max-height: 160px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.search-store-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.85rem;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: background var(--transition);
+}
+
+.search-store-label:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+.search-store-label input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+/* --- 検索結果カード --- */
+.search-result-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin-bottom: 10px;
+    overflow: hidden;
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.search-result-card:hover {
+    border-color: var(--border-hover);
+}
+
+.search-result-card.expanded {
+    border-color: var(--accent);
+    box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.search-card-header {
+    padding: 14px 16px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.search-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+}
+
+.search-drug-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    word-break: break-all;
+}
+
+.search-reg-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.search-reg-badge.narcotic {
+    background: var(--danger);
+    color: #fff;
+}
+
+.search-reg-badge.psychotropic {
+    background: var(--warning);
+    color: #000;
+}
+
+.search-card-meta {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.search-meta-item {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.search-card-toggle {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-left: auto;
+    transition: transform var(--transition);
+}
+
+/* --- 店舗テーブル --- */
+.search-card-body {
+    border-top: 1px solid var(--border-color);
+    animation: slideDown 0.2s ease;
+}
+
+.search-store-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.search-store-table thead th {
+    padding: 8px 12px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    background: rgba(0,0,0,0.2);
+    text-align: left;
+    position: sticky;
+    top: 0;
+}
+
+.search-store-table thead th:nth-child(2),
+.search-store-table thead th:nth-child(3) {
+    text-align: center;
+}
+
+.search-store-table tbody tr {
+    transition: background var(--transition);
+}
+
+.search-store-table tbody tr:hover {
+    background: rgba(255,255,255,0.03);
+}
+
+.search-store-table tbody tr.has-stock {
+    color: var(--text-primary);
+}
+
+.search-store-table tbody tr.no-stock {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+.search-store-table tbody td {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.search-store-table .stock-qty {
+    text-align: center;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.search-store-table .ship-freq {
+    text-align: center;
+}
+
+/* --- 出庫頻度インジケーター --- */
+.freq-indicator {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    min-width: 28px;
+    text-align: center;
+}
+
+.freq-indicator.freq-excellent {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--accent-light);
+}
+
+.freq-indicator.freq-good {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+}
+
+.freq-indicator.freq-low {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--warning);
+}
+
+.freq-indicator.freq-none {
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+
+/* --- 空の結果メッセージ --- */
+.search-empty {
+    text-align: center;
+    padding: 40px 16px;
+    color: var(--text-muted);
+    font-size: 1rem;
+}
+
+/* ============================================
+   レスポンシブ対応 — モバイルファースト
+   ============================================ */
+
+@media (max-width: 768px) {
+    /* --- 全体 --- */
+    .section-header h1 {
+        font-size: 1.1rem;
+    }
+
+    /* --- TOP画面カード --- */
+    .role-cards {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 12px !important;
+        padding: 0 12px !important;
+    }
+
+    .role-card h2 {
+        font-size: 1rem;
+    }
+
+    .role-card p {
+        font-size: 0.75rem;
+    }
+
+    /* --- 薬品検索 --- */
+    #search-section > div {
+        padding: 0 12px !important;
+    }
+
+    .search-input-area {
+        flex-wrap: wrap;
+    }
+
+    .search-input-area .autocomplete-wrapper {
+        flex: 1 1 100% !important;
+    }
+
+    .search-input-area .btn-primary {
+        flex: 1;
+    }
+
+    .search-filter-btn {
+        flex: 0 0 48px;
+    }
+
+    .search-drug-name {
+        font-size: 0.88rem;
+    }
+
+    .search-meta-item {
+        font-size: 0.75rem;
+    }
+
+    .search-store-table {
+        font-size: 0.8rem;
+    }
+
+    .search-store-table thead th,
+    .search-store-table tbody td {
+        padding: 6px 8px;
+    }
+
+    /* --- 管理者・その他の画面のパディング --- */
+    .admin-tabs {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 480px) {
+    .role-cards {
+        grid-template-columns: 1fr !important;
+    }
+
+    .hero h1 {
+        font-size: 1.3rem;
+    }
+
+    .hero .app-desc {
+        font-size: 0.85rem;
+    }
+
+    .search-card-header {
+        padding: 10px 12px;
+    }
+
+    .search-store-table thead th,
+    .search-store-table tbody td {
+        padding: 5px 6px;
+    }
+
+    /* --- ログイン画面のスマホ対応 --- */
+    .password-content {
+        padding: 30px 16px !important;
+        width: 92% !important;
+    }
+    
+    .password-form {
+        flex-direction: column !important;
+        gap: 12px !important;
+        align-items: stretch !important;
+    }
+    
+    .password-input {
+        width: 100% !important;
+        box-sizing: border-box !important;
+        text-indent: 0.3em !important; /* letter-spacingによる右ズレのセンタリング調整 */
+    }
+    
+    .password-btn {
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+}
+
