@@ -5,6 +5,10 @@
 
 const SharedData = (() => {
 
+    // ===== デフォルト設定 =====
+    // ※ここにリポジトリURLを設定しておくと、全PCで自動同期が有効になります
+    const DEFAULT_GITHUB_REPO_URL = 'https://github.com/M4R21/kusuri-ohikkoshi';
+
     // GitHubリポジトリURLからraw content URLを生成
     function getRawUrl(repoUrl) {
         // https://github.com/user/repo → https://raw.githubusercontent.com/user/repo/main/data/shared-data.json
@@ -12,6 +16,12 @@ const SharedData = (() => {
         if (!match) return null;
         const [, user, repo] = match;
         return `https://raw.githubusercontent.com/${user}/${repo}/main/data/shared-data.json`;
+    }
+
+    // ===== リポジトリURLの取得（DB保存値 → デフォルト値の順で使用） =====
+    async function getRepoUrl() {
+        const savedUrl = await DB.getSetting('githubRepoUrl');
+        return savedUrl || DEFAULT_GITHUB_REPO_URL;
     }
 
     // ===== エクスポート: IndexedDB → JSON ファイル =====
@@ -80,7 +90,7 @@ const SharedData = (() => {
 
     // ===== インポート: GitHub上のJSON → IndexedDB =====
     async function importFromGitHub(showToasts = true) {
-        const repoUrl = await DB.getSetting('githubRepoUrl');
+        const repoUrl = await getRepoUrl();
         if (!repoUrl) {
             if (showToasts) {
                 console.log('GitHubリポジトリURLが設定されていません。ローカルデータを使用します。');
@@ -224,7 +234,7 @@ const SharedData = (() => {
     // ===== GitHub上のデータ状態を確認 =====
     async function checkSharedStatus() {
         const statusEl = document.getElementById('status-shared-check');
-        const repoUrl = await DB.getSetting('githubRepoUrl');
+        const repoUrl = await getRepoUrl();
 
         if (!repoUrl) {
             statusEl.textContent = '✗ GitHubリポジトリURLが設定されていません。「GitHubリポジトリ設定」でURLを保存してください。';
@@ -271,8 +281,8 @@ const SharedData = (() => {
 
     // ===== 初期化 =====
     async function init() {
-        // GitHubリポジトリURL表示
-        const repoUrl = await DB.getSetting('githubRepoUrl');
+        // GitHubリポジトリURL表示（保存値がなければデフォルト値を表示）
+        const repoUrl = await getRepoUrl();
         const input = document.getElementById('github-repo-url');
         if (input && repoUrl) {
             input.value = repoUrl;
